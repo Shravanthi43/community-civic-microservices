@@ -140,6 +140,36 @@ def get_ward(ward_id):
 # Start Ward Service
 # ---------------------------------------------------------------
 
+
+# Validate Ward by Ward Number
+@app.route("/wards/number/<ward_number>", methods=["GET"])
+def get_ward_by_number(ward_number):
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT id, ward_number, ward_name, area
+        FROM wards
+        WHERE ward_number = ?
+    """, (ward_number,))
+
+    ward = cursor.fetchone()
+
+    db.close()
+
+    if ward is None:
+        return jsonify({
+            "error": "Ward not found"
+        }), 404
+
+    return jsonify({
+        "ward_id": ward[0],
+        "ward_number": ward[1],
+        "ward_name": ward[2],
+        "area": ward[3]
+    })
+
 if __name__ == "__main__":
     initialize_database()
     app.run(port=5003, debug=True)

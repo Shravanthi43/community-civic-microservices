@@ -6,53 +6,73 @@
 </head>
 
 <body>
-    <div class="container">
 
-        <h1>Community Civic Portal</h1>
+<div class="container">
 
-        <h2>Ward Registration</h2>
+    <h1>Community Civic Portal</h1>
+    <h2>Ward Management</h2>
 
-        <form id="wardForm">
+    <h3>Add New Ward</h3>
 
-            <label>Ward Number</label>
-            <input type="text" id="wardNumber" required>
+    <form id="wardForm">
 
-            <label>Ward Name</label>
-            <input type="text" id="wardName" required>
+        <label>Ward Number</label>
+        <input type="text" id="wardNumber" placeholder="Example: 101" required>
 
-            <label>Area</label>
-            <input type="text" id="area" required>
+        <label>Ward Name</label>
+        <input type="text" id="wardName" placeholder="Example: Ward 101" required>
 
-            <button type="submit">Add Ward</button>
+        <label>Area</label>
+        <input type="text" id="area" placeholder="Example: Shivaji Nagar" required>
 
-        </form>
+        <button type="submit">Add Ward</button>
 
-        <div id="result"></div>
+    </form>
 
-        <hr>
+    <div id="result"></div>
 
-        <h2>Find Ward</h2>
+    <hr>
 
-        <input
-            type="number"
-            id="searchWardId"
-            placeholder="Ward ID"
-        >
+    <h3>Check Ward Number</h3>
 
-        <button onclick="findWard()">Find Ward</button>
+    <input type="text" id="searchWardNumber"
+           placeholder="Enter Ward Number">
 
-        <div id="wardDetails"></div>
+    <button onclick="findWardByNumber()">
+        Check Ward
+    </button>
 
-        <hr>
+    <div id="wardDetails"></div>
 
-        <h2>All Wards</h2>
+    <hr>
 
-        <button onclick="getAllWards()">View All Wards</button>
+    <h3>Find Ward By ID</h3>
 
-        <div id="allWards"></div>
+    <input type="number" id="searchWardId"
+           placeholder="Enter Ward ID">
 
-    </div>
+    <button onclick="findWard()">
+        Find Ward
+    </button>
 
-    <script src="script.js"></script>
+    <div id="wardIdDetails"></div>
+
+    <hr>
+
+    <h3>All Registered Wards</h3>
+
+    <button onclick="getAllWards()">
+        View All Wards
+    </button>
+
+    <div id="allWards"></div>
+
+</div>
+
+<script src="script.js"></script>
+
 </body>
 </html>
+
+
+
