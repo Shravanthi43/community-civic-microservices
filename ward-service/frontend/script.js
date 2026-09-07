@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5003";
+const API_URL = "http://localhost:5000";
 
 document.getElementById("wardForm").addEventListener("submit", async function(event) {
     event.preventDefault();

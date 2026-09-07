@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5002";
+const API_URL = "http://localhost:5000";
 
 document.getElementById("complaintForm")
     .addEventListener("submit", async function(event) {

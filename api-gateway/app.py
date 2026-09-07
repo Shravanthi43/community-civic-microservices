@@ -1,54 +1,174 @@
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import requests
+import time
+from collections import defaultdict, deque
 
 app = Flask(__name__)
 CORS(app)
 
-# ---------------------------------------------------------------
-# API Gateway: single entry point for the frontend.
-# It forwards requests to the microservice that owns the path.
-# ---------------------------------------------------------------
+# ============================================================
+# MICROSERVICE INSTANCES
+# ============================================================
 
-CITIZEN_SERVICE_URL = "http://localhost:5001"
-COMPLAINT_SERVICE_URL = "http://localhost:5002"
-WARD_SERVICE_URL = "http://localhost:5003"
+CITIZEN_SERVICES = [
+    "http://localhost:5001",
+    "http://localhost:5004"
+]
+
+COMPLAINT_SERVICES = [
+    "http://localhost:5002",
+    "http://localhost:5005"
+]
+
+WARD_SERVICES = [
+    "http://localhost:5003",
+    "http://localhost:5006"
+]
+
+# Round-robin counters
+counters = {
+    "citizen": 0,
+    "complaint": 0,
+    "ward": 0
+}
+
+# ============================================================
+# RATE LIMITING
+# ============================================================
+
+RATE_LIMIT = 100
+WINDOW = 60
+
+request_history = defaultdict(deque)
 
 
-def forward_request(target_url, path):
-    """Forward the incoming request to the target service."""
+def check_rate_limit(client_ip):
 
-    url = f"{target_url}/{path}"
+    now = time.time()
+    history = request_history[client_ip]
 
-    try:
-        response = requests.request(
-            method=request.method,
-            url=url,
-            json=request.get_json(silent=True),
-            params=request.args,
-            timeout=5
-        )
+    while history and history[0] <= now - WINDOW:
+        history.popleft()
 
-    except requests.exceptions.RequestException:
-        return jsonify({
-            "error": f"Service at {target_url} is unavailable"
-        }), 503
+    if len(history) >= RATE_LIMIT:
+        return False
 
-    return Response(
-        response.content,
-        status=response.status_code,
-        content_type=response.headers.get(
-            "Content-Type",
-            "application/json"
-        )
+    history.append(now)
+    return True
+
+
+# ============================================================
+# LOAD BALANCING - ROUND ROBIN
+# ============================================================
+
+def get_next_service(service_name, services):
+
+    index = counters[service_name]
+
+    service = services[index]
+
+    counters[service_name] = (
+        index + 1
+    ) % len(services)
+
+    return service
+
+
+# ============================================================
+# LOGGING & MONITORING
+# ============================================================
+
+def log_request(method, path, service, status, response_time):
+
+    print(
+        f"[GATEWAY LOG] "
+        f"{method} {path} -> {service} | "
+        f"Status: {status} | "
+        f"Time: {response_time:.3f}s"
     )
 
 
-# ---------------------------------------------------------------
-# Citizen Service
-# Gateway: /citizens/*
-# Backend: http://localhost:5001
-# ---------------------------------------------------------------
+# ============================================================
+# FORWARD REQUEST
+# ============================================================
+
+def forward_request(service_name, services, path):
+
+    client_ip = request.remote_addr
+
+    # Rate Limiting
+    if not check_rate_limit(client_ip):
+
+        return jsonify({
+            "error": "Rate limit exceeded",
+            "message": "Maximum 100 requests per minute allowed"
+        }), 429
+
+
+    # Load Balancing
+    attempts = len(services)
+
+    for _ in range(attempts):
+
+        service_url = get_next_service(
+            service_name,
+            services
+        )
+
+        url = f"{service_url}/{path}"
+
+        start_time = time.time()
+
+        try:
+
+            response = requests.request(
+                method=request.method,
+                url=url,
+                json=request.get_json(silent=True),
+                params=request.args,
+                timeout=5
+            )
+
+            response_time = time.time() - start_time
+
+            log_request(
+                request.method,
+                request.path,
+                service_url,
+                response.status_code,
+                response_time
+            )
+
+            return Response(
+                response.content,
+                status=response.status_code,
+                content_type=response.headers.get(
+                    "Content-Type",
+                    "application/json"
+                )
+            )
+
+        except requests.exceptions.RequestException:
+
+            response_time = time.time() - start_time
+
+            log_request(
+                request.method,
+                request.path,
+                service_url,
+                "UNAVAILABLE",
+                response_time
+            )
+
+    return jsonify({
+        "error": f"{service_name.capitalize()} Service is unavailable"
+    }), 503
+
+
+# ============================================================
+# CITIZEN ROUTE
+# ============================================================
 
 @app.route(
     "/citizens",
@@ -60,19 +180,23 @@ def forward_request(target_url, path):
     methods=["GET", "POST"]
 )
 def route_citizens(path):
-    full_path = f"citizens/{path}" if path else "citizens"
+
+    full_path = (
+        f"citizens/{path}"
+        if path
+        else "citizens"
+    )
 
     return forward_request(
-        CITIZEN_SERVICE_URL,
+        "citizen",
+        CITIZEN_SERVICES,
         full_path
     )
 
 
-# ---------------------------------------------------------------
-# Complaint Service
-# Gateway: /complaints/*
-# Backend: http://localhost:5002
-# ---------------------------------------------------------------
+# ============================================================
+# COMPLAINT ROUTE
+# ============================================================
 
 @app.route(
     "/complaints",
@@ -84,19 +208,23 @@ def route_citizens(path):
     methods=["GET", "POST"]
 )
 def route_complaints(path):
-    full_path = f"complaints/{path}" if path else "complaints"
+
+    full_path = (
+        f"complaints/{path}"
+        if path
+        else "complaints"
+    )
 
     return forward_request(
-        COMPLAINT_SERVICE_URL,
+        "complaint",
+        COMPLAINT_SERVICES,
         full_path
     )
 
 
-# ---------------------------------------------------------------
-# Ward Service
-# Gateway: /wards/*
-# Backend: http://localhost:5003
-# ---------------------------------------------------------------
+# ============================================================
+# WARD ROUTE
+# ============================================================
 
 @app.route(
     "/wards",
@@ -108,29 +236,51 @@ def route_complaints(path):
     methods=["GET", "POST"]
 )
 def route_wards(path):
-    full_path = f"wards/{path}" if path else "wards"
+
+    full_path = (
+        f"wards/{path}"
+        if path
+        else "wards"
+    )
 
     return forward_request(
-        WARD_SERVICE_URL,
+        "ward",
+        WARD_SERVICES,
         full_path
     )
 
 
-# ---------------------------------------------------------------
-# Gateway health check
-# ---------------------------------------------------------------
+# ============================================================
+# GATEWAY HEALTH CHECK
+# ============================================================
 
 @app.route("/", methods=["GET"])
 def health_check():
+
     return jsonify({
         "message": "API Gateway is running",
-        "routes": {
-            "/citizens/*": "Citizen Service (port 5001)",
-            "/complaints/*": "Complaint Service (port 5002)",
-            "/wards/*": "Ward Service (port 5003)"
-        }
+        "port": 5000,
+        "services": {
+            "citizen": CITIZEN_SERVICES,
+            "complaint": COMPLAINT_SERVICES,
+            "ward": WARD_SERVICES
+        },
+        "responsibilities": [
+            "Request Routing",
+            "Load Balancing",
+            "Rate Limiting",
+            "Logging and Monitoring"
+        ]
     })
 
 
+# ============================================================
+# START API GATEWAY
+# ============================================================
+
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+
+    app.run(
+        port=5000,
+        debug=True
+    )
