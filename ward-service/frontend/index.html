@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ward Service</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>Community Civic Portal</h1>
+
+        <h2>Ward Registration</h2>
+
+        <form id="wardForm">
+
+            <label>Ward Number</label>
+            <input type="text" id="wardNumber" required>
+
+            <label>Ward Name</label>
+            <input type="text" id="wardName" required>
+
+            <label>Area</label>
+            <input type="text" id="area" required>
+
+            <button type="submit">Add Ward</button>
+
+        </form>
+
+        <div id="result"></div>
+
+        <hr>
+
+        <h2>Find Ward</h2>
+
+        <input
+            type="number"
+            id="searchWardId"
+            placeholder="Ward ID"
+        >
+
+        <button onclick="findWard()">Find Ward</button>
+
+        <div id="wardDetails"></div>
+
+        <hr>
+
+        <h2>All Wards</h2>
+
+        <button onclick="getAllWards()">View All Wards</button>
+
+        <div id="allWards"></div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
