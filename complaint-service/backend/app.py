@@ -1,3 +1,4 @@
+import sys
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
@@ -123,4 +124,4 @@ def get_complaint(complaint_id):
 
 if __name__ == "__main__":
     initialize_database()
-    app.run(port=5002, debug=True)
+    app.run(port=int(sys.argv[1]) if len(sys.argv) > 1 else 5002, debug=True)
