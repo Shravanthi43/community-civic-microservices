@@ -171,3 +171,64 @@ async function getAllWards() {
             </div>`;
     }
 }
+
+async function testRateLimit() {
+
+    const result = document.getElementById("rateLimitResult");
+    const requestInput = document.getElementById("requestCount");
+
+    const totalRequests = parseInt(requestInput.value);
+
+    if (!totalRequests || totalRequests < 1) {
+        result.innerHTML = `
+            <p class="error">Please enter a valid number of requests.</p>
+        `;
+        return;
+    }
+
+    result.innerHTML = "Testing rate limit... Please wait.";
+
+    let successful = 0;
+    let rateLimited = 0;
+    let failed = 0;
+
+    const requests = [];
+
+    for (let i = 0; i < totalRequests; i++) {
+
+        requests.push(
+            fetch(`${API_URL}/wards`)
+                .then(response => {
+
+                    if (response.status === 429) {
+                        rateLimited++;
+                    }
+                    else if (response.ok) {
+                        successful++;
+                    }
+                    else {
+                        failed++;
+                    }
+
+                })
+                .catch(() => {
+                    failed++;
+                })
+        );
+
+    }
+
+    await Promise.all(requests);
+
+    result.innerHTML = `
+        <h3>Rate Limit Test Result</h3>
+
+        <p>Total Requests: ${totalRequests}</p>
+
+        <p>Successful Requests: ${successful}</p>
+
+        <p>Rate Limited (429): ${rateLimited}</p>
+
+        <p>Other Failed Requests: ${failed}</p>
+    `;
+}

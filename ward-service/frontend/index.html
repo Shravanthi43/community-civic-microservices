@@ -69,6 +69,25 @@
 
 </div>
 
+<hr>
+
+<h2>Rate Limiting Test</h2>
+
+<p>
+    Test the API Gateway rate limit by sending multiple requests.
+</p>
+
+<input
+    type="number"
+    id="requestCount"
+    placeholder="Enter number of requests"
+    min="1"
+>
+
+<button onclick="testRateLimit()">Send Requests</button>
+
+<div id="rateLimitResult"></div>
+
 <script src="script.js"></script>
 
 </body>
